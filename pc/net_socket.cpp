@@ -1,3 +1,5 @@
+// -*- mode: c++; c-basic-indent: 2; tab-width: 2; -*-
+
 #include "net_socket.hpp"
 #include <openssl/sha.h>
 #include <sys/types.h>
@@ -9,7 +11,9 @@
 #include <poll.h>
 #include <iostream>
 
+#ifndef __APPLE__
 #define PC_EPOLL_FLAGS (EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLHUP|EPOLLERR)
+#endif
 
 namespace pc
 {
@@ -212,6 +216,106 @@ void net_wtr::print() const
 ///////////////////////////////////////////////////////////////////////////
 // net_loop
 
+#ifdef USE_KQUEUE
+
+net_loop::net_loop()
+: kq_(-1)
+{
+  __builtin_memset( evarr_, 0, sizeof( evarr_ ) );
+}
+
+net_loop::~net_loop()
+{
+  if ( kq_ > 0 ) {
+    ::close( kq_ );
+    kq_ = -1;
+  }
+}
+
+bool net_loop::init()
+{
+  if ( ( kq_ = kqueue() ) < 0 ) {
+    return set_err_msg( "failed to create kqueue", errno );
+  }
+  return true;
+}
+
+void net_loop::add( net_socket *eptr, int events )
+{
+  struct kevent ev;
+
+  if ( ! events ) {
+    events = EVFILT_READ;
+  }
+
+  EV_SET( &ev, eptr->get_fd(), events, EV_ADD | EV_ENABLE, 0, 0, eptr );
+
+  evchanges_.push_back( ev );
+
+  eptr->set_in_loop( true );
+
+  return;
+}
+
+void net_loop::del( net_socket *eptr )
+{
+  struct kevent ev[2];
+
+  EV_SET( &ev[0], eptr->get_fd(), EVFILT_READ, EV_DELETE, 0, 0, NULL );
+  EV_SET( &ev[1], eptr->get_fd(), EVFILT_WRITE, EV_DELETE, 0, 0, NULL );
+
+  evchanges_.push_back( ev[0] );
+  evchanges_.push_back( ev[1] );
+
+  eptr->set_in_loop( false );
+
+  return;
+}
+
+bool net_loop::poll( int timeout )
+{
+  int nevents = -1;
+  struct timespec ts;
+
+  // timeout is provided in milliseconds because that's what epoll_wait expects
+  ts.tv_sec = 0;
+  ts.tv_nsec = timeout * 1000 * 1000;
+
+  nevents = kevent( kq_, (struct kevent *)&evchanges_, evchanges_.size(),
+                    evarr_, max_events_, &ts );
+
+  // Any modifications have been made.  Clear the vector for the next round.
+  evchanges_.clear();
+
+  if ( nevents < 0 ) {
+    return set_err_msg( "failed to poll via kqueue", errno);
+  } else if ( nevents > 0 ) {
+    for ( int i = 0; i < nevents; i++ ) {
+      // handle errors
+      if ( evarr_[i].flags & EV_ERROR ) {
+        return set_err_msg( "EV_ERROR: %s\n", errno );
+      }
+
+      /* remote end of socket has shutdown */
+      if ( evarr_[i].flags & EV_EOF ) {
+        return set_err_msg( "remote end closed", errno );
+      }
+
+      net_socket *sp = static_cast<net_socket*>( evarr_[i].udata );
+
+      sp->poll();
+      if ( sp->get_is_err() ) {
+        del( sp );
+        sp->teardown();
+      }
+    }
+  }
+
+  return true;
+}
+
+#else
+
 net_loop::net_loop()
 : fd_(-1)
 {
@@ -277,6 +381,7 @@ bool net_loop::poll( int timeout )
     return false;
   }
 }
+#endif
 
 ///////////////////////////////////////////////////////////////////////////
 // net_socket
@@ -366,7 +471,11 @@ bool net_socket::set_block( bool block )
 bool net_socket::init()
 {
   if ( lp_ ) {
+#ifdef USE_KQUEUE
+    lp_->add( this, EVFILT_READ );
+#else
     lp_->add( this, PC_EPOLL_FLAGS );
+#endif
   }
   return true;
 }
@@ -407,7 +516,11 @@ void net_connect::add_send( net_wtr& msg )
   } else {
     whd_ = hd;
     if ( get_net_loop() ) {
+#ifdef USE_KQUEUE
+      get_net_loop()->add( this, EVFILT_WRITE );
+#else
       get_net_loop()->add( this, PC_EPOLL_FLAGS | EPOLLOUT );
+#endif
     }
   }
   wtl_ = tl;
@@ -430,7 +543,13 @@ void net_connect::poll_send()
     // write current buffer to ssl socket
     char *ptr = &whd_->buf_[wsz_];
     uint16_t len = whd_->size_ - wsz_;
-    int rc = ::send( get_fd(), ptr, len, MSG_NOSIGNAL );
+    int flags = 0;
+
+#ifndef __APPLE__
+    flags |= MSG_NOSIGNAL;
+#endif
+
+    int rc = ::send( get_fd(), ptr, len, flags );
     if ( rc > 0 ) {
       wsz_ += rc;
 
@@ -442,7 +561,11 @@ void net_connect::poll_send()
         if ( ! ( whd_ = nxt ) ) {
           wtl_ = nullptr;
           if ( get_net_loop() ) {
+#ifdef USE_KQUEUE
+            get_net_loop()->add( this, EVFILT_WRITE );
+#else
             get_net_loop()->add( this, PC_EPOLL_FLAGS );
+#endif
           }
           break;
         }
@@ -465,8 +588,14 @@ void net_connect::poll_recv()
     if ( len < buf_len ) {
       rdr_.resize( rdr_.size() + buf_len );
     }
+    int flags = 0;
+
+#ifndef __APPLE__
+    flags |= MSG_NOSIGNAL;
+#endif
+
     // read up to buf_len at a time
-    ssize_t rc = ::recv( get_fd(), &rdr_[rsz_], buf_len, MSG_NOSIGNAL );
+    ssize_t rc = ::recv( get_fd(), &rdr_[rsz_], buf_len, flags );
     if ( rc > 0 ) {
       rsz_ += rc;
     } else {
@@ -475,6 +604,7 @@ void net_connect::poll_recv()
       }
       break;
     }
+
     // parse content
     for( size_t idx=0; !get_is_err() && rsz_; ) {
       size_t rlen = 0;
@@ -636,6 +766,11 @@ bool tcp_connect::init()
   teardown();
   reset_err();
   int fd = ::socket( AF_INET, SOCK_STREAM, IPPROTO_TCP );
+#ifdef __APPLE__
+  int nosigpipe[1] = { 1 };
+  setsockopt( fd, SOL_SOCKET, SO_NOSIGPIPE, nosigpipe, sizeof( nosigpipe ) );
+#else
+#endif
   if ( fd < 0 ) {
     return set_err_msg( "failed to construct tcp socket", errno );
   }
@@ -801,9 +936,15 @@ bool udp_socket::init()
 
 void udp_socket::send( ip_addr *ap, const char *buf, size_t len )
 {
+  int flags = 0;
+
+#ifndef __APPLE__
+  flags |= MSG_NOSIGNAL;
+#endif
+
   sockaddr *saddr = (sockaddr*)ap->buf_;
-  ::sendto( get_fd(), buf, len, MSG_NOSIGNAL,
-      saddr, sizeof( sockaddr_in ) );
+
+  ::sendto( get_fd(), buf, len, flags, saddr, sizeof( sockaddr_in ) );
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1144,7 +1285,7 @@ void tx_connect::reconnect()
   // attempt to reconnect
   cts_ = ts;
   ctimeout_ += ctimeout_;
-  ctimeout_ = std::min( ctimeout_, 120L*PC_NSECS_IN_SEC );
+  ctimeout_ = std::min( ctimeout_, PC_RECONNECT_TIMEOUT );
   wait_conn_ = true;
   init();
 }

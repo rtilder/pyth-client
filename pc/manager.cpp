@@ -5,7 +5,6 @@ using namespace pc;
 
 #define PC_TPU_PROXY_PORT     8898
 #define PC_RPC_HTTP_PORT      8899
-#define PC_RECONNECT_TIMEOUT  (120L*1000000000L)
 #define PC_BLOCKHASH_TIMEOUT  3
 #define PC_PUB_INTERVAL       (227L*PC_NSECS_IN_MSEC)
 #define PC_RPC_HOST           "localhost"

@@ -3,11 +3,12 @@
 #include <stdint.h>
 #include <string>
 
-#define PC_PACKED        __attribute__((__packed__))
-#define PC_LIKELY(ARG)   __builtin_expect((ARG),1)
-#define PC_UNLIKELY(ARG) __builtin_expect((ARG),0)
-#define PC_NSECS_IN_SEC  1000000000L
-#define PC_NSECS_IN_MSEC 1000000L
+#define PC_PACKED             __attribute__((__packed__))
+#define PC_LIKELY(ARG)        __builtin_expect((ARG),1)
+#define PC_UNLIKELY(ARG)      __builtin_expect((ARG),0)
+#define PC_NSECS_IN_SEC       1000000000L
+#define PC_NSECS_IN_MSEC      1000000L
+#define PC_RECONNECT_TIMEOUT  (int64_t) ( 120L * PC_NSECS_IN_SEC )
 
 namespace pc
 {
@@ -38,6 +39,12 @@ namespace pc
 
   // get host/port from <host>[:port1[:port2]] convention
   std::string get_host_port( const std::string& host, int&port1, int&port2);
+
+#ifdef __APPLE__
+  int clock_nanosleep(clockid_t clockid, int flags,
+                           const struct timespec *request,
+                           struct timespec *remain);
+#endif
 
   // string as char pointer plus length
   struct str

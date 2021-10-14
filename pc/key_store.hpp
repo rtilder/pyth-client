@@ -2,6 +2,7 @@
 
 #include <pc/key_pair.hpp>
 #include <pc/error.hpp>
+#include <errno.h>
 #include <vector>
 
 namespace pc

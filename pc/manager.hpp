@@ -8,6 +8,7 @@
 #include <pc/dbl_list.hpp>
 #include <pc/hash_map.hpp>
 #include <pc/capture.hpp>
+#include <pc/misc.hpp>
 
 // status bits
 #define PC_PYTH_RPC_CONNECTED    (1<<0)

@@ -2,6 +2,11 @@
 #include <ctype.h>
 #include <time.h>
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#endif
+
 namespace pc
 {
 
@@ -313,7 +318,7 @@ char *nsecs_to_utc6( int64_t ts, char *cptr )
   int64_t nsecs = ts%PC_NSECS_IN_SEC;
   ts /= PC_NSECS_IN_SEC;
   struct tm t[1];
-  gmtime_r( &ts, t );
+  gmtime_r( (time_t *)&ts, t );
   uint_to_str4( &cptr[0], t->tm_year + 1900 );
   uint_to_str2( &cptr[5], t->tm_mon + 1 );
   uint_to_str2( &cptr[8], t->tm_mday );
@@ -404,5 +409,25 @@ std::string get_host_port(const std::string& hosti, int&port1, int&port2)
   if ( num>2 ) port2 = std::stoi( res[2] );
   return res[0];
 }
+
+#ifdef __APPLE__
+#define UNUSED(expr) do \
+    { \
+      (void)(expr); \
+    } while (0)
+
+void clock_nanosleep(int clockid, int flags, const struct timespec *request,
+                    struct timespec *remain)
+{
+  UNUSED(clockid);
+  UNUSED(flags);
+  UNUSED(remain);
+  static mach_timebase_info_data_t timebase_info;
+  uint64_t now = mach_absolute_time();
+
+  mach_timebase_info( &timebase_info );
+  mach_wait_until( now + request->tv_nsec );
+}
+#endif
 
 }

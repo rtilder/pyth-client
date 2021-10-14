@@ -41,6 +41,7 @@ std::string mem_map::get_file() const
   return file_;
 }
 
+/*
 bool mem_map::remap()
 {
   struct stat fst[1];
@@ -59,6 +60,7 @@ bool mem_map::remap()
   len_ = nlen;
   return true;
 }
+*/
 
 bool mem_map::init()
 {

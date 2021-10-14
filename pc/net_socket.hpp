@@ -3,8 +3,17 @@
 #include <pc/error.hpp>
 #include <pc/key_pair.hpp>
 #include <pc/misc.hpp>
-#include <sys/epoll.h>
+#include <errno.h>
+#include <sys/time.h>
 #include <vector>
+
+#ifdef __APPLE__
+// Use kqueue on OS X
+#define USE_KQUEUE
+#include <sys/event.h>
+#else
+#include <sys/epoll.h>
+#endif
 
 namespace pc
 {
@@ -78,9 +87,15 @@ namespace pc
 
     static const int max_events_ = 128;
 
-    int         fd_;                 // epoll file descriptor
-    epoll_event ev_[1];              // event used in epoll_ctl
-    epoll_event evarr_[max_events_]; // receive events
+#ifdef USE_KQUEUE
+    int           kq_;
+    std::vector<struct kevent> evchanges_;
+    struct kevent evarr_[max_events_];
+#else
+    int           fd_;                 // epoll file descriptor
+    epoll_event   ev_[1];              // event used in epoll_ctl
+    epoll_event   evarr_[max_events_]; // receive events
+#endif
   };
 
   // socket-based network source
@@ -511,3 +526,5 @@ namespace pc
   }
 
 }
+
+// -*- mode: c; c-basic-indent: 2; -*-
