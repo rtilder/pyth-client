@@ -1,5 +1,3 @@
-// -*- mode: c++; c-basic-indent: 2; tab-width: 2; -*-
-
 #include "net_socket.hpp"
 #include <openssl/sha.h>
 #include <sys/types.h>

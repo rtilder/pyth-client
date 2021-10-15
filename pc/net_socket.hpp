@@ -526,5 +526,3 @@ namespace pc
   }
 
 }
-
-// -*- mode: c; c-basic-indent: 2; -*-
