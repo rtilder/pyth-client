@@ -3,3 +3,10 @@ build
 debug
 target
 Cargo.lock
+*~
+*.so
+*.dylib
+*.dll
+*.a
+*.la
+*.lib
