@@ -85,7 +85,7 @@ void test_log()
   log::set_level( PC_LOG_DBG_LVL );
   PC_LOG_DBG( "example" )
     .add( "hello", str( "world" ) )
-    .add( "ival", 42L )
+    .add( "ival", (int32_t) 42L )
     .add( "fval", 3.14159 )
     .end();
   log::set_level( PC_LOG_INF_LVL );

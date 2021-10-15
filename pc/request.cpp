@@ -671,7 +671,7 @@ bool price::update(
         .add( "product_account", *prod_->get_account() )
         .add( "symbol", get_symbol() )
         .add( "price_type", price_type_to_str( get_price_type() ) )
-        .add( "num_txid", tvec_.size() )
+        .add( "num_txid", (uint32_t) tvec_.size() )
         .end();
       tvec_.erase( tvec_.begin(), tvec_.begin() + 50 );
     }

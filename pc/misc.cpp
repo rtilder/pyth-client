@@ -2,11 +2,6 @@
 #include <ctype.h>
 #include <time.h>
 
-#ifdef __APPLE__
-#include <mach/mach.h>
-#include <mach/mach_time.h>
-#endif
-
 namespace pc
 {
 
@@ -409,25 +404,5 @@ std::string get_host_port(const std::string& hosti, int&port1, int&port2)
   if ( num>2 ) port2 = std::stoi( res[2] );
   return res[0];
 }
-
-#ifdef __APPLE__
-#define UNUSED(expr) do \
-    { \
-      (void)(expr); \
-    } while (0)
-
-void clock_nanosleep(int clockid, int flags, const struct timespec *request,
-                    struct timespec *remain)
-{
-  UNUSED(clockid);
-  UNUSED(flags);
-  UNUSED(remain);
-  static mach_timebase_info_data_t timebase_info;
-  uint64_t now = mach_absolute_time();
-
-  mach_timebase_info( &timebase_info );
-  mach_wait_until( now + request->tv_nsec );
-}
-#endif
 
 }

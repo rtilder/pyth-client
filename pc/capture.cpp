@@ -4,6 +4,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#endif
+
 using namespace pc;
 
 capture::capture()
@@ -172,7 +177,15 @@ void capture::run()
       break;
     } else {
       // sleep a bit
+#ifdef __APPLE__
+      static mach_timebase_info_data_t timebase_info;
+      uint64_t now = mach_absolute_time();
+
+      mach_timebase_info( &timebase_info );
+      mach_wait_until( now + ts->tv_nsec );
+#else
       clock_nanosleep( CLOCK_REALTIME, 0, ts, NULL );
+#endif
     }
   }
 }

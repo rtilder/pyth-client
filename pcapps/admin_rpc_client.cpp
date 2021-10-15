@@ -83,7 +83,7 @@ void rpc::get_minimum_balance_rent_exemption::request( json_wtr& msg )
 {
   msg.add_key( "method", "getMinimumBalanceForRentExemption" );
   msg.add_key( "params", json_wtr::e_arr );
-  msg.add_val( sz_ );
+  msg.add_val( (uint64_t) sz_ );
   msg.pop();
 }
 

@@ -5,7 +5,6 @@
 #define PC_RPC_HTTP_PORT      8899
 #define PC_LEADER_MAX         256
 #define PC_LEADER_MIN         32
-#define PC_RECONNECT_TIMEOUT  (120L*1000000000L)
 #define PC_HBEAT_INTERVAL     16
 
 using namespace pc;
@@ -203,7 +202,7 @@ void tx_svr::submit( const char *buf, size_t len )
 {
   PC_LOG_DBG( "submit tx" )
     .add( "slot", slot_ )
-    .add( "num_leaders", avec_.size() )
+    .add( "num_leaders", (int32_t) avec_.size() )
     .end();
   for( ip_addr& addr: avec_ ) {
     tconn_.send( &addr, buf, len );
@@ -278,7 +277,7 @@ void tx_svr::on_response( rpc::slot_subscribe *res )
   }
   PC_LOG_DBG( "receive slot" )
     .add( "slot", slot_ )
-    .add( "num_leaders", avec_.size() )
+    .add( "num_leaders", (int32_t) avec_.size() )
     .end();
 }
 

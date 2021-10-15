@@ -208,7 +208,7 @@ void user::parse_upd_price( uint32_t tok, uint32_t itok )
     if ( sptr->update( price, conf, stype ) ) {
       // create result
       add_header();
-      jw_.add_key( "result", 0UL );
+      jw_.add_key( "result", 0ULL );
       add_tail( itok );
     } else if ( !sptr->get_is_ready_publish() ) {
       add_error( itok, PC_JSON_NOT_READY,

@@ -40,12 +40,6 @@ namespace pc
   // get host/port from <host>[:port1[:port2]] convention
   std::string get_host_port( const std::string& host, int&port1, int&port2);
 
-#ifdef __APPLE__
-  int clock_nanosleep(clockid_t clockid, int flags,
-                           const struct timespec *request,
-                           struct timespec *remain);
-#endif
-
   // string as char pointer plus length
   struct str
   {

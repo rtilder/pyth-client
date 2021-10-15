@@ -75,12 +75,12 @@ void test_json_wtr()
     json_wtr wtr;
     wtr.add_val( json_wtr::e_obj );
     wtr.add_key( "foo", "hello" );
-    wtr.add_key( "num", 42UL );
+    wtr.add_key( "num", (int64_t) 42UL );
     wtr.add_key( "obj", json_wtr::e_obj );
     wtr.add_key( "bollox", "stuff" );
     wtr.pop();
     wtr.add_key( "arr", json_wtr::e_arr );
-    wtr.add_val( 9328UL );
+    wtr.add_val( (int64_t) 9328UL );
     wtr.add_val( "string" );
     wtr.add_val( json_wtr::e_obj );
     wtr.add_key( "k", "v" );

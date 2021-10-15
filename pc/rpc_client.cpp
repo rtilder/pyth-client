@@ -715,7 +715,7 @@ void rpc::get_program_accounts::request( json_wtr& msg )
     msg.add_key( "filters", json_wtr::e_arr );
     msg.add_val( json_wtr::e_obj );
     msg.add_key( "memcmp", json_wtr::e_obj );
-    msg.add_key( "offset", offsetof( pc_acc_t, type_ ) );
+    msg.add_key( "offset", (uint64_t) offsetof( pc_acc_t, type_ ) );
     msg.add_key_enc_base58(
       "bytes", str( ( char* )&acct_type_, sizeof( acct_type_ ) ) );
     msg.pop();

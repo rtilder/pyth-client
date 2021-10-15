@@ -7,6 +7,11 @@
 #include <fstream>
 #include <iostream>
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#endif
+
 namespace pc
 {
 
@@ -141,7 +146,15 @@ void log_impl::run()
       break;
     } else {
       // sleep a bit
+#ifdef __APPLE__
+      static mach_timebase_info_data_t timebase_info;
+      uint64_t now = mach_absolute_time();
+
+      mach_timebase_info( &timebase_info );
+      mach_wait_until( now + ts->tv_nsec );
+#else
       clock_nanosleep( CLOCK_REALTIME, 0, ts, NULL );
+#endif
     }
   }
 }
@@ -177,14 +190,14 @@ static int log_pid = getpid();
 void log_wtr::add_i64( int64_t val )
 {
   char *buf = reserve( 32 );
-  sprintf( buf, "%ld", val );
+  sprintf( buf, "%lld", val );
   advance( __builtin_strlen( buf ) );
 }
 
 void log_wtr::add_u64( uint64_t val )
 {
   char *buf = reserve( 32 );
-  sprintf( buf, "%lu", val );
+  sprintf( buf, "%llu", val );
   advance( __builtin_strlen( buf ) );
 }
 
